@@ -249,6 +249,16 @@ impl Board {
             self.discover_new_values();
         }
     }
+
+    fn is_solved(&self) -> bool {
+        let mut is_solved = true;
+        for y in 0..9 {
+            for x in 0..9 {
+                is_solved &= self.get_cell(&Coord::new(x, y)).is_set
+            }
+        }
+        is_solved
+    }
 }
 
 #[cfg(test)]
@@ -344,12 +354,8 @@ mod tests {
         board.set_value(&Coord::new(7, 8), 8);
         board.set_value(&Coord::new(8, 8), 6);
 
-        board.cells.print();
-        println!(">>>");
         board.discover_new_values();
-        println!(">>>");
-        board.cells.print();
 
-        println!("{:?}", board.get_cell(&Coord::new(3, 8)).possible_values);
+        assert_eq!(board.is_solved(), true);
     }
 }

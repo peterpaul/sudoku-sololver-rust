@@ -4,6 +4,7 @@ use std::fmt;
 #[derive(Copy, Clone)]
 struct Cell {
     possible_values: [bool; 9],
+    is_set: bool,
 }
 
 impl fmt::Debug for Cell {
@@ -19,11 +20,15 @@ impl fmt::Debug for Cell {
 impl Cell {
     fn new() -> Self {
         Cell {
-            possible_values: [true; 9]
+            possible_values: [true; 9],
+            is_set: false,
         }
     }
 
     fn strike_through(&mut self, index: usize) -> &mut Self {
+        if self.is_set && self.get_value() == Some(index) {
+            panic!("Cannot strikethrough a set value.");
+        }
         self.possible_values[index] = false;
         self
     }
@@ -51,6 +56,7 @@ impl Cell {
         for i in 0..9 {
             self.possible_values[i] = i == value
         }
+        self.is_set = true
     }
 }
 
@@ -110,8 +116,8 @@ impl CellContainer {
                 .iter()
                 .map(|c| {
                     match c.get_value() {
-                        Some(v) => v.to_string(),
-                        None => String::from("-"),
+                        Some(v) => (v + 1).to_string(),
+                        None => String::from(" "),
                     }
                 })
                 .collect();
@@ -125,6 +131,20 @@ impl CellContainer {
 
     fn get_mut_cell(&mut self, coord: &Coord) -> &mut Cell {
         &mut self.cells[coord.y * 9 + coord.x]
+    }
+
+    fn get_cell_coords_to_update(&self) -> Vec<Coord> {
+        let mut cell_coords_to_update = Vec::new();
+        for y in 0..9 {
+            for x in 0..9 {
+                let coord = Coord::new(x, y);
+                let cell = self.get_cell(&coord);
+                if !cell.is_set && cell.get_value().is_some() {
+                    cell_coords_to_update.push(coord);
+                }
+            }
+        }
+        cell_coords_to_update
     }
 }
 
@@ -206,6 +226,29 @@ impl Board {
         }
         self
     }
+
+    fn discover_new_values(&mut self) {
+        let coords_to_update: Vec<Coord>;
+        {
+            coords_to_update = self.cells.get_cell_coords_to_update();
+        }
+        let discovered_new_values = !coords_to_update.is_empty();
+        for coord in coords_to_update {
+            println!("Handling {:?}", &coord);
+            let cell;
+            {
+                cell = self.cells.get_cell(&coord);
+            }
+            match cell.get_value() {
+                Some(v) => self.set_value(&coord, v),
+                None => panic!("I expect some value here, because of cells.get_cell_coords_to_update()"),
+            };
+        }
+        if discovered_new_values {
+            println!(">>> Recursive call");
+            self.discover_new_values();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -235,6 +278,14 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn strike_through_set_value() {
+        let mut cell = Cell::new();
+        cell.set_value(4);
+        cell.strike_through(4);
+    }
+
+    #[test]
     fn cell_set_value_works() {
         let mut cell = Cell::new();
         cell.set_value(4);
@@ -246,5 +297,59 @@ mod tests {
         let mut board = Board::new();
         board.set_value(&Coord::new(3, 3), 3);
         assert_eq!(board.get_cell(&Coord::new(3, 3)).get_value(), Some(3));
+    }
+
+    #[test]
+    fn solve_puzzle() {
+        let mut board = Board::new();
+        board.set_value(&Coord::new(0, 0), 4);
+        board.set_value(&Coord::new(1, 0), 7);
+        board.set_value(&Coord::new(2, 0), 3);
+        board.set_value(&Coord::new(3, 0), 8);
+        board.set_value(&Coord::new(4, 0), 1);
+        board.set_value(&Coord::new(8, 0), 2);
+        board.set_value(&Coord::new(1, 1), 6);
+        board.set_value(&Coord::new(3, 1), 0);
+        board.set_value(&Coord::new(4, 1), 5);
+        board.set_value(&Coord::new(6, 1), 4);
+        board.set_value(&Coord::new(7, 1), 3);
+        board.set_value(&Coord::new(1, 2), 5);
+        board.set_value(&Coord::new(3, 2), 4);
+        board.set_value(&Coord::new(5, 2), 3);
+        board.set_value(&Coord::new(1, 3), 1);
+        board.set_value(&Coord::new(2, 3), 8);
+        board.set_value(&Coord::new(4, 3), 6);
+        board.set_value(&Coord::new(6, 3), 5);
+        board.set_value(&Coord::new(7, 3), 4);
+        board.set_value(&Coord::new(0, 4), 0);
+        board.set_value(&Coord::new(3, 4), 1);
+        board.set_value(&Coord::new(5, 4), 4);
+        board.set_value(&Coord::new(0, 5), 6);
+        board.set_value(&Coord::new(1, 5), 3);
+        board.set_value(&Coord::new(2, 5), 4);
+        board.set_value(&Coord::new(6, 5), 8);
+        board.set_value(&Coord::new(2, 6), 6);
+        board.set_value(&Coord::new(3, 6), 7);
+        board.set_value(&Coord::new(6, 6), 2);
+        board.set_value(&Coord::new(7, 6), 0);
+        board.set_value(&Coord::new(2, 7), 2);
+        board.set_value(&Coord::new(3, 7), 6);
+        board.set_value(&Coord::new(4, 7), 0);
+        board.set_value(&Coord::new(7, 7), 7);
+        board.set_value(&Coord::new(8, 7), 4);
+        board.set_value(&Coord::new(0, 8), 5);
+        board.set_value(&Coord::new(2, 8), 7);
+        board.set_value(&Coord::new(4, 8), 4);
+        board.set_value(&Coord::new(5, 8), 1);
+        board.set_value(&Coord::new(7, 8), 8);
+        board.set_value(&Coord::new(8, 8), 6);
+
+        board.cells.print();
+        println!(">>>");
+        board.discover_new_values();
+        println!(">>>");
+        board.cells.print();
+
+        println!("{:?}", board.get_cell(&Coord::new(3, 8)).possible_values);
     }
 }

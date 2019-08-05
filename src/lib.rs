@@ -91,17 +91,59 @@ impl Group {
     }
 }
 
+#[derive(Clone)]
+struct CellContainer {
+    cells: [Cell; 81],
+}
+
+#[allow(unused)]
+impl CellContainer {
+    fn new(cells: [Cell; 81]) -> Self {
+        CellContainer {
+            cells: cells,
+        }
+    }
+
+    fn print(&self) {
+        for y in 0..9 {
+            let row: Vec<String> = self.cells[(y*9)..((y+1)*9)]
+                .iter()
+                .map(|c| {
+                    match c.get_value() {
+                        Some(v) => v.to_string(),
+                        None => String::from("-"),
+                    }
+                })
+                .collect();
+            println!("{:?}", row);
+        }
+    }
+
+    fn get_cell(&self, coord: &Coord) -> &Cell {
+        &self.cells[coord.y * 9 + coord.x]
+    }
+
+    fn get_mut_cell(&mut self, coord: &Coord) -> &mut Cell {
+        &mut self.cells[coord.y * 9 + coord.x]
+    }
+}
+
+impl fmt::Debug for CellContainer {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        self.cells[..].fmt(formatter)
+    }
+}
 
 #[allow(unused)]
 #[derive(Clone)]
 struct Board {
-    cells: [Cell; 81],
+    cells: CellContainer,
     groups: Vec<Group>
 }
 
 impl fmt::Debug for Board {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        self.cells[..].fmt(formatter)
+        self.cells.fmt(formatter)
     }
 }
 
@@ -135,36 +177,17 @@ impl Board {
             }
         }
         Board {
-            cells: [Cell::new(); 81],
+            cells: CellContainer::new([Cell::new(); 81]),
             groups: groups
         }
     }
 
     fn get_cell(&self, coord: &Coord) -> &Cell {
-        &self.cells[coord.y * 9 + coord.x]
-    }
-
-    fn print(&self) {
-        for y in 0..9 {
-            let row: Vec<String> = self.cells[(y*9)..((y+1)*9)]
-                .iter()
-                .map(|c| {
-                    match c.get_value() {
-                        Some(v) => v.to_string(),
-                        None => String::from("-"),
-                    }
-                })
-                .collect();
-            println!("{:?}", row);
-        }
-    }
-    
-    fn get_mut_cell(&mut self, coord: &Coord) -> &mut Cell {
-        &mut self.cells[coord.y * 9 + coord.x]
+        self.cells.get_cell(coord)
     }
 
     fn set_value(&mut self, coord: &Coord, value: usize) -> &mut Self {
-        let mut cells: &mut [Cell; 81] = &mut self.cells;
+        let mut cells = &mut self.cells;
         let groups: Vec<&Group> = self.groups
             .iter()
             .filter(|g| { g.contains_coord(coord) })
@@ -173,7 +196,7 @@ impl Board {
             for i in 0..9 {
                 let cur = &g.coordinates[i];
 
-                let mut cell = get_mut_cell(cells, &cur);
+                let mut cell = cells.get_mut_cell(&cur);
                 if cur == coord {
                     cell.set_value(value);
                 } else {
@@ -184,11 +207,6 @@ impl Board {
         self
     }
 }
-
-fn get_mut_cell<'a>(cells: &'a mut [Cell; 81], coord: &Coord) -> &'a mut Cell {
-    &mut cells[coord.y * 9 + coord.x]
-}
-
 
 #[cfg(test)]
 mod tests {

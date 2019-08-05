@@ -174,7 +174,7 @@ impl Board {
                 let cur = &g.coordinates[i];
 
                 let mut cell = get_mut_cell(cells, &cur);
-                if *cur == *coord {
+                if cur == coord {
                     cell.set_value(value);
                 } else {
                     cell.strike_through(value);

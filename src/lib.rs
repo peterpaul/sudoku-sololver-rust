@@ -62,6 +62,16 @@ impl Cell {
             self.possible_values[i] = i == value
         }
     }
+
+    fn possibilities(&self) -> usize {
+        let mut p = 0;
+        for i in 0..9 {
+            if self.possible_values[i] {
+                p += 1;
+            }
+        }
+        p
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -271,6 +281,47 @@ impl Board {
         }
         is_solved
     }
+
+    fn solve(&self) -> Self {
+        let mut puzzle = self.clone();
+        puzzle.discover_new_values();
+        puzzle
+    }
+
+    fn find_pivot_coord(&self) -> Option<Coord> {
+        let mut open_cells: Vec<(Coord, usize)> = Vec::new();
+        for y in 0..9 {
+            for x in 0..9 {
+                let coord = Coord::new(x, y);
+                let cell = self.get_cell(&coord);
+                if !cell.is_set {
+                    open_cells.push((coord, cell.possibilities()));
+                }
+            }
+        }
+
+        let mut result: Option<(Coord, usize)> = None;
+
+        for c in open_cells {
+            match result {
+                Some(v) => {
+                    result = if c.1 < v.1 {
+                        Some(c)
+                    } else {
+                        Some(v)
+                    }
+                },
+                None => result = Some(c),
+            }
+        }
+        match result {
+            Some(v) => {
+                println!("### {:?}", v);
+                Some(v.0)
+            },
+            None => None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -368,8 +419,9 @@ mod tests {
 
         assert_eq!(board.is_solved(), false);
 
-        board.discover_new_values();
+        let solved_board = board.solve();
 
-        assert_eq!(board.is_solved(), true);
+        assert_eq!(board.is_solved(), false);
+        assert_eq!(solved_board.is_solved(), true);
     }
 }

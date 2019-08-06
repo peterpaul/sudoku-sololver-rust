@@ -256,7 +256,6 @@ impl Board {
         }
         let discovered_new_values = !coords_to_update.is_empty();
         for coord in coords_to_update {
-            println!("Handling {:?}", &coord);
             let cell;
             {
                 cell = self.cells.get_cell(&coord);
@@ -267,7 +266,6 @@ impl Board {
             };
         }
         if discovered_new_values {
-            println!(">>> Recursive call");
             self.discover_new_values();
         }
     }
@@ -316,7 +314,6 @@ impl Board {
         }
         match result {
             Some(v) => {
-                println!("### {:?}", v);
                 Some(v.0)
             },
             None => None

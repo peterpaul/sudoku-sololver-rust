@@ -50,13 +50,17 @@ impl Cell {
     }
 
     fn set_value(&mut self, value: usize) {
+        self.prefill_value(value);
+        self.is_set = true
+    }
+
+    fn prefill_value(&mut self, value: usize) {
         if value >= 9 {
             panic!("Illegal value {}, must be smaller than 9", value);
         }
         for i in 0..9 {
             self.possible_values[i] = i == value
         }
-        self.is_set = true
     }
 }
 
@@ -207,7 +211,15 @@ impl Board {
     }
 
     fn set_value(&mut self, coord: &Coord, value: usize) -> &mut Self {
-        let mut cells = &mut self.cells;
+        self.set_value_by(coord, value, |cell, value| { cell.set_value(value) })
+    }
+
+    fn prefill_value(&mut self, coord: &Coord, value: usize) -> &mut Self {
+        self.set_value_by(coord, value, |cell, value| { cell.prefill_value(value) })
+    }
+
+    fn set_value_by(&mut self, coord: &Coord, value: usize, setter: fn(&mut Cell, usize)) -> &mut Self {
+        let cells = &mut self.cells;
         let groups: Vec<&Group> = self.groups
             .iter()
             .filter(|g| { g.contains_coord(coord) })
@@ -216,9 +228,9 @@ impl Board {
             for i in 0..9 {
                 let cur = &g.coordinates[i];
 
-                let mut cell = cells.get_mut_cell(&cur);
+                let cell = cells.get_mut_cell(&cur);
                 if cur == coord {
-                    cell.set_value(value);
+                    setter(cell, value);
                 } else {
                     cell.strike_through(value);
                 }
@@ -312,47 +324,49 @@ mod tests {
     #[test]
     fn solve_puzzle() {
         let mut board = Board::new();
-        board.set_value(&Coord::new(0, 0), 4);
-        board.set_value(&Coord::new(1, 0), 7);
-        board.set_value(&Coord::new(2, 0), 3);
-        board.set_value(&Coord::new(3, 0), 8);
-        board.set_value(&Coord::new(4, 0), 1);
-        board.set_value(&Coord::new(8, 0), 2);
-        board.set_value(&Coord::new(1, 1), 6);
-        board.set_value(&Coord::new(3, 1), 0);
-        board.set_value(&Coord::new(4, 1), 5);
-        board.set_value(&Coord::new(6, 1), 4);
-        board.set_value(&Coord::new(7, 1), 3);
-        board.set_value(&Coord::new(1, 2), 5);
-        board.set_value(&Coord::new(3, 2), 4);
-        board.set_value(&Coord::new(5, 2), 3);
-        board.set_value(&Coord::new(1, 3), 1);
-        board.set_value(&Coord::new(2, 3), 8);
-        board.set_value(&Coord::new(4, 3), 6);
-        board.set_value(&Coord::new(6, 3), 5);
-        board.set_value(&Coord::new(7, 3), 4);
-        board.set_value(&Coord::new(0, 4), 0);
-        board.set_value(&Coord::new(3, 4), 1);
-        board.set_value(&Coord::new(5, 4), 4);
-        board.set_value(&Coord::new(0, 5), 6);
-        board.set_value(&Coord::new(1, 5), 3);
-        board.set_value(&Coord::new(2, 5), 4);
-        board.set_value(&Coord::new(6, 5), 8);
-        board.set_value(&Coord::new(2, 6), 6);
-        board.set_value(&Coord::new(3, 6), 7);
-        board.set_value(&Coord::new(6, 6), 2);
-        board.set_value(&Coord::new(7, 6), 0);
-        board.set_value(&Coord::new(2, 7), 2);
-        board.set_value(&Coord::new(3, 7), 6);
-        board.set_value(&Coord::new(4, 7), 0);
-        board.set_value(&Coord::new(7, 7), 7);
-        board.set_value(&Coord::new(8, 7), 4);
-        board.set_value(&Coord::new(0, 8), 5);
-        board.set_value(&Coord::new(2, 8), 7);
-        board.set_value(&Coord::new(4, 8), 4);
-        board.set_value(&Coord::new(5, 8), 1);
-        board.set_value(&Coord::new(7, 8), 8);
-        board.set_value(&Coord::new(8, 8), 6);
+        board.prefill_value(&Coord::new(0, 0), 4);
+        board.prefill_value(&Coord::new(1, 0), 7);
+        board.prefill_value(&Coord::new(2, 0), 3);
+        board.prefill_value(&Coord::new(3, 0), 8);
+        board.prefill_value(&Coord::new(4, 0), 1);
+        board.prefill_value(&Coord::new(8, 0), 2);
+        board.prefill_value(&Coord::new(1, 1), 6);
+        board.prefill_value(&Coord::new(3, 1), 0);
+        board.prefill_value(&Coord::new(4, 1), 5);
+        board.prefill_value(&Coord::new(6, 1), 4);
+        board.prefill_value(&Coord::new(7, 1), 3);
+        board.prefill_value(&Coord::new(1, 2), 5);
+        board.prefill_value(&Coord::new(3, 2), 4);
+        board.prefill_value(&Coord::new(5, 2), 3);
+        board.prefill_value(&Coord::new(1, 3), 1);
+        board.prefill_value(&Coord::new(2, 3), 8);
+        board.prefill_value(&Coord::new(4, 3), 6);
+        board.prefill_value(&Coord::new(6, 3), 5);
+        board.prefill_value(&Coord::new(7, 3), 4);
+        board.prefill_value(&Coord::new(0, 4), 0);
+        board.prefill_value(&Coord::new(3, 4), 1);
+        board.prefill_value(&Coord::new(5, 4), 4);
+        board.prefill_value(&Coord::new(0, 5), 6);
+        board.prefill_value(&Coord::new(1, 5), 3);
+        board.prefill_value(&Coord::new(2, 5), 4);
+        board.prefill_value(&Coord::new(6, 5), 8);
+        board.prefill_value(&Coord::new(2, 6), 6);
+        board.prefill_value(&Coord::new(3, 6), 7);
+        board.prefill_value(&Coord::new(6, 6), 2);
+        board.prefill_value(&Coord::new(7, 6), 0);
+        board.prefill_value(&Coord::new(2, 7), 2);
+        board.prefill_value(&Coord::new(3, 7), 6);
+        board.prefill_value(&Coord::new(4, 7), 0);
+        board.prefill_value(&Coord::new(7, 7), 7);
+        board.prefill_value(&Coord::new(8, 7), 4);
+        board.prefill_value(&Coord::new(0, 8), 5);
+        board.prefill_value(&Coord::new(2, 8), 7);
+        board.prefill_value(&Coord::new(4, 8), 4);
+        board.prefill_value(&Coord::new(5, 8), 1);
+        board.prefill_value(&Coord::new(7, 8), 8);
+        board.prefill_value(&Coord::new(8, 8), 6);
+
+        assert_eq!(board.is_solved(), false);
 
         board.discover_new_values();
 

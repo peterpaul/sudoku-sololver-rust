@@ -280,10 +280,28 @@ impl Board {
         is_solved
     }
 
-    fn solve(&self) -> Self {
+    fn solve(&self) -> Vec<Self> {
         let mut puzzle = self.clone();
         puzzle.discover_new_values();
-        puzzle
+        let pivot = puzzle.find_pivot_coord();
+        let mut result = Vec::new();
+        if puzzle.is_solved() {
+            result.push(puzzle);
+        } else {
+            if let Some(p) = pivot {
+                let pivot_cell = puzzle.get_cell(&p);
+                for i in 0..9 {
+                    if pivot_cell.possible_values[i] {
+                        let mut subpuzzle = puzzle.clone();
+                        subpuzzle.cells.get_mut_cell(&p).set_value(i);
+                        for p in subpuzzle.solve() {
+                            result.push(p);
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 
     fn find_pivot_coord(&self) -> Option<Coord> {
@@ -416,9 +434,10 @@ mod tests {
 
         assert_eq!(board.is_solved(), false);
 
-        let solved_board = board.solve();
+        let solutions = board.solve();
 
         assert_eq!(board.is_solved(), false);
-        assert_eq!(solved_board.is_solved(), true);
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions.get(0).and_then(|it| Some(it.is_solved())), Some(true));
     }
 }

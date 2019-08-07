@@ -25,12 +25,11 @@ impl Cell {
         }
     }
 
-    fn strike_through(&mut self, index: usize) -> &mut Self {
+    fn strike_through(&mut self, index: usize) {
         if self.is_set && self.get_value() == Some(index) {
             panic!("Cannot strikethrough a set value.");
         }
         self.possible_values[index] = false;
-        self
     }
 
     fn get_value(&self) -> Option<usize> {
@@ -220,15 +219,15 @@ impl Board {
         self.cells.get_cell(coord)
     }
 
-    fn set_value(&mut self, coord: &Coord, value: usize) -> &mut Self {
+    fn set_value(&mut self, coord: &Coord, value: usize) {
         self.set_value_by(coord, value, |cell, value| { cell.set_value(value) })
     }
 
-    fn prefill_value(&mut self, coord: &Coord, value: usize) -> &mut Self {
+    fn prefill_value(&mut self, coord: &Coord, value: usize) {
         self.set_value_by(coord, value, |cell, value| { cell.prefill_value(value) })
     }
 
-    fn set_value_by(&mut self, coord: &Coord, value: usize, setter: fn(&mut Cell, usize)) -> &mut Self {
+    fn set_value_by(&mut self, coord: &Coord, value: usize, setter: fn(&mut Cell, usize)) {
         let cells = &mut self.cells;
         let groups: Vec<&Group> = self.groups
             .iter()
@@ -246,7 +245,6 @@ impl Board {
                 }
             }
         }
-        self
     }
 
     fn discover_new_values(&mut self) {

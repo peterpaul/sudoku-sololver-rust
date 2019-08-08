@@ -215,6 +215,26 @@ impl Board {
         }
     }
 
+    fn new_nrc() -> Self {
+        let mut board = Board::new();
+        let mut groups = board.groups;
+        for xx in 0..2 {
+            for yy in 0..2 {
+                let mut coords = Vec::new();
+                for x in 0..3 {
+                    for y in 0..3 {
+                        coords.push(Coord::new(xx * 4 + 1 + x, yy * 4 + 1 + y));
+                    }
+                }
+                groups.push(Group::new(coords));
+            }
+        }
+        Board {
+            cells: board.cells,
+            groups: groups,
+        }
+    }
+
     fn get_cell(&self, coord: &Coord) -> &Cell {
         self.cells.get_cell(coord)
     }
@@ -388,6 +408,40 @@ mod tests {
         let mut board = Board::new();
         board.set_value(&Coord::new(3, 3), 3);
         assert_eq!(board.get_cell(&Coord::new(3, 3)).get_value(), Some(3));
+    }
+
+    #[test]
+    fn solve_nrc_puzzle() {
+        let mut board = Board::new_nrc();
+        board.prefill_value(&Coord::new(3, 1), 3);
+        board.prefill_value(&Coord::new(6, 1), 4);
+        board.prefill_value(&Coord::new(3, 2), 1);
+        board.prefill_value(&Coord::new(8, 2), 7);
+        board.prefill_value(&Coord::new(1, 3), 8);
+        board.prefill_value(&Coord::new(2, 3), 0);
+        board.prefill_value(&Coord::new(3, 3), 4);
+        board.prefill_value(&Coord::new(6, 3), 6);
+        board.prefill_value(&Coord::new(1, 4), 1);
+        board.prefill_value(&Coord::new(2, 4), 6);
+        board.prefill_value(&Coord::new(3, 4), 7);
+        board.prefill_value(&Coord::new(4, 4), 5);
+        board.prefill_value(&Coord::new(0, 5), 2);
+        board.prefill_value(&Coord::new(3, 5), 0);
+        board.prefill_value(&Coord::new(4, 5), 3);
+        board.prefill_value(&Coord::new(6, 5), 8);
+        board.prefill_value(&Coord::new(5, 6), 2);
+        board.prefill_value(&Coord::new(0, 7), 6);
+        board.prefill_value(&Coord::new(2, 7), 2);
+        board.prefill_value(&Coord::new(4, 7), 4);
+        board.prefill_value(&Coord::new(6, 7), 7);
+
+        assert_eq!(board.is_solved(), false);
+
+        let solutions = board.solve();
+
+        assert_eq!(board.is_solved(), false);
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions.get(0).and_then(|it| Some(it.is_solved())), Some(true));
     }
 
     #[test]

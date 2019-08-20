@@ -1,8 +1,12 @@
+//! # Sudoku
+//!
+//! A sudoku solver in Rust.
+
 use std::fmt;
 
-#[allow(unused)]
+/// Captures the possible values of a single Cell.
 #[derive(Copy, Clone)]
-struct Cell {
+pub struct Cell {
     possible_values: [bool; 9],
     is_set: bool,
 }
@@ -16,9 +20,8 @@ impl fmt::Debug for Cell {
     }
 }
 
-#[allow(unused)]
 impl Cell {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Cell {
             possible_values: [true; 9],
             is_set: false,
@@ -32,7 +35,7 @@ impl Cell {
         self.possible_values[index] = false;
     }
 
-    fn get_value(&self) -> Option<usize> {
+    pub fn get_value(&self) -> Option<usize> {
         let mut values = 0;
         let mut last_value = 0;
         for i in 0..9 {
@@ -88,13 +91,11 @@ impl Coord {
     }
 }
 
-#[allow(unused)]
 #[derive(Clone, Debug)]
 struct Group {
     coordinates: Vec<Coord>
 }
 
-#[allow(unused)]
 impl Group {
     fn new (elements: Vec<Coord>) -> Self {
         if elements.len() != 9 {
@@ -111,11 +112,10 @@ impl Group {
 }
 
 #[derive(Clone)]
-struct CellContainer {
+pub struct CellContainer {
     cells: [Cell; 81],
 }
 
-#[allow(unused)]
 impl CellContainer {
     fn new(cells: [Cell; 81]) -> Self {
         CellContainer {
@@ -123,9 +123,9 @@ impl CellContainer {
         }
     }
 
-    fn print(&self) {
+    pub fn print(&self) {
         for y in 0..9 {
-            let row: Vec<String> = self.cells[(y*9)..((y+1)*9)]
+            let row: Vec<String>= self.cells[(y*9)..((y+1)*9)]
                 .iter()
                 .map(|c| {
                     match c.get_value() {
@@ -134,7 +134,7 @@ impl CellContainer {
                     }
                 })
                 .collect();
-            println!("{:?}", row);
+            println!("{}", row.join(" "));
         }
     }
 
@@ -167,10 +167,9 @@ impl fmt::Debug for CellContainer {
     }
 }
 
-#[allow(unused)]
 #[derive(Clone)]
-struct Board {
-    cells: CellContainer,
+pub struct Board {
+    pub cells: CellContainer,
     groups: Vec<Group>
 }
 
@@ -180,7 +179,6 @@ impl fmt::Debug for Board {
     }
 }
 
-#[allow(unused)]
 impl Board {
     fn new() -> Self {
         let mut groups = Vec::new();
@@ -216,7 +214,7 @@ impl Board {
     }
 
     fn new_nrc() -> Self {
-        let mut board = Board::new();
+        let board = Board::new();
         let mut groups = board.groups;
         for xx in 0..2 {
             for yy in 0..2 {
@@ -233,6 +231,17 @@ impl Board {
             cells: board.cells,
             groups: groups,
         }
+    }
+
+    pub fn from_string(s: &str) -> Self {
+        let mut board = Board::new();
+        for l in s.lines() {
+            let numbers: Vec<_> = l.split(' ').map(|x| x.parse::<usize>().unwrap()).collect();
+            assert!(numbers.len() == 3);
+            board.prefill_value(&Coord::new(numbers[0] - 1, numbers[1] - 1),
+                                numbers[2] - 1);
+        }
+        board
     }
 
     fn get_cell(&self, coord: &Coord) -> &Cell {
@@ -288,7 +297,7 @@ impl Board {
         }
     }
 
-    fn is_solved(&self) -> bool {
+    pub fn is_solved(&self) -> bool {
         let mut is_solved = true;
         for y in 0..9 {
             for x in 0..9 {
@@ -298,7 +307,7 @@ impl Board {
         is_solved
     }
 
-    fn solve(&self) -> Vec<Self> {
+    pub fn solve(&self) -> Vec<Self> {
         let mut puzzle = self.clone();
         puzzle.discover_new_values();
         let pivot = puzzle.find_pivot_coord();
@@ -354,8 +363,8 @@ impl Board {
             }
         }
         match result {
-            Some(v) => {
-                Some(v.0)
+            Some((coord, _)) => {
+                Some(coord)
             },
             None => None
         }
@@ -441,7 +450,7 @@ mod tests {
 
         assert_eq!(board.is_solved(), false);
         assert_eq!(solutions.len(), 1);
-        assert_eq!(solutions.get(0).and_then(|it| Some(it.is_solved())), Some(true));
+        assert_eq!(solutions.get(0).map(|it| it.is_solved()), Some(true));
     }
 
     #[test]
@@ -495,6 +504,6 @@ mod tests {
 
         assert_eq!(board.is_solved(), false);
         assert_eq!(solutions.len(), 1);
-        assert_eq!(solutions.get(0).and_then(|it| Some(it.is_solved())), Some(true));
+        assert_eq!(solutions.get(0).map(|it| it.is_solved()), Some(true));
     }
 }

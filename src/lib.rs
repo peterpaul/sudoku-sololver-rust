@@ -2,17 +2,40 @@
 //!
 //! A sudoku solver in Rust.
 
+struct Repeater<T> {
+    f: Box<dyn Fn() -> T + 'static>,
+}
+
+impl<T> Repeater<T> {
+    fn new(f: Box<dyn Fn() -> T + 'static>) -> Repeater<T> {
+        Repeater {
+            f
+        }
+    }
+}
+
+impl<T> Iterator for Repeater<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        Some((*self.f)())
+    }
+}
+
 /// Captures the possible values of a single Cell.
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 struct Cell {
-    possible_values: [bool; 9],
+    possible_values: Box<[bool]>,
     is_set: bool,
 }
 
 impl Cell {
-    fn new() -> Self {
+    fn new(size: usize) -> Self {
+        let possible_values: Vec<bool> = Repeater::new(Box::new(|| true))
+            .take(size)
+            .collect();
         Cell {
-            possible_values: [true; 9],
+            possible_values: possible_values.into_boxed_slice(),
             is_set: false,
         }
     }
@@ -24,10 +47,14 @@ impl Cell {
         self.possible_values[index] = false;
     }
 
+    fn len(&self) -> usize {
+        self.possible_values.len()
+    }
+
     fn get_value(&self) -> Option<usize> {
         let mut values = 0;
         let mut last_value = 0;
-        for i in 0..9 {
+        for i in 0..self.len() {
             if self.possible_values[i] {
                 values += 1;
                 last_value = i;
@@ -46,17 +73,17 @@ impl Cell {
     }
 
     fn prefill_value(&mut self, value: usize) {
-        if value >= 9 {
-            panic!("Illegal value {}, must be smaller than 9", value);
+        if value >= self.len() {
+            panic!("Illegal value {}, must be smaller than {}", value, self.len());
         }
-        for i in 0..9 {
+        for i in 0..self.len() {
             self.possible_values[i] = i == value
         }
     }
 
     fn possibilities(&self) -> usize {
         let mut p = 0;
-        for i in 0..9 {
+        for i in 0..self.len() {
             if self.possible_values[i] {
                 p += 1;
             }
@@ -86,12 +113,9 @@ struct Group {
 }
 
 impl Group {
-    fn new (elements: Vec<Coord>) -> Self {
-        if elements.len() != 9 {
-            panic!("Wrong Group size, expected 9, but got {}", elements.len());
-        }
+    fn new (coordinates: Vec<Coord>) -> Self {
         Group {
-            coordinates: elements,
+            coordinates,
         }
     }
 
@@ -102,19 +126,27 @@ impl Group {
 
 #[derive(Clone)]
 struct CellContainer {
-    cells: [Cell; 81],
+    width: usize,
+    height: usize,
+    cells: Box<[Cell]>,
 }
 
 impl CellContainer {
-    fn new(cells: [Cell; 81]) -> Self {
+    fn new(width: usize, height: usize) -> Self {
+        assert!(width == height);
+        let cells: Vec<Cell> = Repeater::new(Box::new(move || { Cell::new(width) }))
+            .take(width * height)
+            .collect();
         CellContainer {
-            cells: cells,
+            width,
+            height,
+            cells: cells.into_boxed_slice(),
         }
     }
 
     fn print(&self) {
-        for y in 0..9 {
-            let row: Vec<String>= self.cells[(y*9)..((y+1)*9)]
+        for y in 0..self.height {
+            let row: Vec<String>= self.cells[(y * self.width)..((y+1) * self.width)]
                 .iter()
                 .map(|c| {
                     match c.get_value() {
@@ -128,17 +160,17 @@ impl CellContainer {
     }
 
     fn get_cell(&self, coord: &Coord) -> &Cell {
-        &self.cells[coord.y * 9 + coord.x]
+        &self.cells[coord.y * self.width + coord.x]
     }
 
     fn get_mut_cell(&mut self, coord: &Coord) -> &mut Cell {
-        &mut self.cells[coord.y * 9 + coord.x]
+        &mut self.cells[coord.y * self.width + coord.x]
     }
 
     fn get_cell_coords_to_update(&self) -> Vec<Coord> {
         let mut cell_coords_to_update = Vec::new();
-        for y in 0..9 {
-            for x in 0..9 {
+        for y in 0..self.height {
+            for x in 0..self.width {
                 let coord = Coord::new(x, y);
                 let cell = self.get_cell(&coord);
                 if !cell.is_set && cell.get_value().is_some() {
@@ -157,41 +189,47 @@ pub struct Board {
 }
 
 impl Board {
-    fn new() -> Self {
+    /// Create a square sudoku puzzle.
+    ///
+    /// `base` is the square root of the width/height of the puzzle.
+    /// So for a regular 9x9 puzzle, use 3.
+    fn new(base: usize) -> Self {
+        let width = base * base;
+        let height = width;
         let mut groups = Vec::new();
-        for x in 0..9 {
+        for x in 0..width {
             let mut coords = Vec::new();
-            for y in 0..9 {
+            for y in 0..height {
                 coords.push(Coord::new(x, y));
             }
             groups.push(Group::new(coords));
         }
-        for y in 0..9 {
+        for y in 0..height {
             let mut coords = Vec::new();
-            for x in 0..9 {
+            for x in 0..width {
                 coords.push(Coord::new(x, y));
             }
             groups.push(Group::new(coords));
         }
-        for xx in 0..3 {
-            for yy in 0..3 {
+        for xx in 0..base {
+            for yy in 0..base {
                 let mut coords = Vec::new();
-                for x in 0..3 {
-                    for y in 0..3 {
-                        coords.push(Coord::new(xx * 3 + x, yy * 3 + y));
+                for x in 0..base {
+                    for y in 0..base {
+                        coords.push(Coord::new(xx * base + x, yy * base + y));
                     }
                 }
                 groups.push(Group::new(coords));
             }
         }
         Board {
-            cells: CellContainer::new([Cell::new(); 81]),
+            cells: CellContainer::new(width, height),
             groups: groups
         }
     }
 
     fn new_nrc() -> Self {
-        let board = Board::new();
+        let board = Board::new(3);
         let mut groups = board.groups;
         for xx in 0..2 {
             for yy in 0..2 {
@@ -211,7 +249,7 @@ impl Board {
     }
 
     pub fn from_string(s: &str) -> Self {
-        let mut board = Board::new();
+        let mut board = Board::new(3);
         for l in s.lines() {
             let numbers: Vec<_> = l.split(' ').map(|x| x.parse::<usize>().unwrap()).collect();
             assert!(numbers.len() == 3);
@@ -223,6 +261,18 @@ impl Board {
 
     fn get_cell(&self, coord: &Coord) -> &Cell {
         self.cells.get_cell(coord)
+    }
+
+    fn width(&self) -> usize {
+        self.cells.width
+    }
+
+    fn height(&self) -> usize {
+        self.cells.height
+    }
+
+    pub fn print(&self) {
+        self.cells.print();
     }
 
     fn set_value(&mut self, coord: &Coord, value: usize) {
@@ -240,9 +290,7 @@ impl Board {
             .filter(|g| { g.contains_coord(coord) })
             .collect();
         for g in groups {
-            for i in 0..9 {
-                let cur = &g.coordinates[i];
-
+            for cur in &g.coordinates {
                 let cell = cells.get_mut_cell(&cur);
                 if cur == coord {
                     setter(cell, value);
@@ -262,7 +310,7 @@ impl Board {
         for coord in coords_to_update {
             let cell;
             {
-                cell = self.cells.get_cell(&coord);
+                cell = self.get_cell(&coord);
             }
             match cell.get_value() {
                 Some(v) => self.set_value(&coord, v),
@@ -276,8 +324,8 @@ impl Board {
 
     pub fn is_solved(&self) -> bool {
         let mut is_solved = true;
-        for y in 0..9 {
-            for x in 0..9 {
+        for y in 0..self.height() {
+            for x in 0..self.width() {
                 is_solved &= self.get_cell(&Coord::new(x, y)).is_set
             }
         }
@@ -295,7 +343,7 @@ impl Board {
         } else {
             if let Some(p) = pivot {
                 let pivot_cell = puzzle.get_cell(&p);
-                (0..9).into_iter().flat_map(|i| {
+                (0..self.width()).into_iter().flat_map(|i| {
                     let i = i as usize;
                     if pivot_cell.possible_values[i] {
                         let mut subpuzzle = puzzle.clone();
@@ -308,15 +356,15 @@ impl Board {
                     .take(1000)
                     .collect()
             } else {
-                    Vec::new()
+                Vec::new()
             }
         }
     }
 
     fn find_pivot_coord(&self) -> Option<Coord> {
         let mut open_cells: Vec<(Coord, usize)> = Vec::new();
-        for y in 0..9 {
-            for x in 0..9 {
+        for y in 0..self.height() {
+            for x in 0..self.width() {
                 let coord = Coord::new(x, y);
                 let cell = self.get_cell(&coord);
                 if !cell.is_set {
@@ -346,10 +394,6 @@ impl Board {
             None => None
         }
     }
-
-    pub fn print(&self) {
-        self.cells.print();
-    }
 }
 
 #[cfg(test)]
@@ -358,7 +402,7 @@ mod tests {
 
     #[test]
     fn strike_through_forward_works() {
-        let mut cell = Cell::new();
+        let mut cell = Cell::new(9);
         for i in 0..8 {
             assert_eq!(cell.get_value(), None);
             cell.strike_through(i);
@@ -368,7 +412,7 @@ mod tests {
 
     #[test]
     fn strike_through_backward_works() {
-        let mut cell = Cell::new();
+        let mut cell = Cell::new(9);
         for i in (1..9).rev() {
             assert_eq!(cell.get_value(), None);
             cell.strike_through(i);
@@ -379,21 +423,21 @@ mod tests {
     #[test]
     #[should_panic]
     fn strike_through_set_value() {
-        let mut cell = Cell::new();
+        let mut cell = Cell::new(9);
         cell.set_value(4);
         cell.strike_through(4);
     }
 
     #[test]
     fn cell_set_value_works() {
-        let mut cell = Cell::new();
+        let mut cell = Cell::new(9);
         cell.set_value(4);
         assert_eq!(cell.get_value(), Some(4));
     }
 
     #[test]
     fn test_board() {
-        let mut board = Board::new();
+        let mut board = Board::new(3);
         board.set_value(&Coord::new(3, 3), 3);
         assert_eq!(board.get_cell(&Coord::new(3, 3)).get_value(), Some(3));
     }
@@ -434,7 +478,7 @@ mod tests {
 
     #[test]
     fn solve_puzzle() {
-        let mut board = Board::new();
+        let mut board = Board::new(3);
         board.prefill_value(&Coord::new(0, 0), 4);
         board.prefill_value(&Coord::new(1, 0), 7);
         board.prefill_value(&Coord::new(2, 0), 3);

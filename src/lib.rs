@@ -2,26 +2,15 @@
 //!
 //! A sudoku solver in Rust.
 
-use std::fmt;
-
 /// Captures the possible values of a single Cell.
 #[derive(Copy, Clone)]
-pub struct Cell {
+struct Cell {
     possible_values: [bool; 9],
     is_set: bool,
 }
 
-impl fmt::Debug for Cell {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        match self.get_value() {
-            Some(v) => v.fmt(formatter),
-            None => "-".fmt(formatter),
-        }
-    }
-}
-
 impl Cell {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Cell {
             possible_values: [true; 9],
             is_set: false,
@@ -35,7 +24,7 @@ impl Cell {
         self.possible_values[index] = false;
     }
 
-    pub fn get_value(&self) -> Option<usize> {
+    fn get_value(&self) -> Option<usize> {
         let mut values = 0;
         let mut last_value = 0;
         for i in 0..9 {
@@ -112,7 +101,7 @@ impl Group {
 }
 
 #[derive(Clone)]
-pub struct CellContainer {
+struct CellContainer {
     cells: [Cell; 81],
 }
 
@@ -123,7 +112,7 @@ impl CellContainer {
         }
     }
 
-    pub fn print(&self) {
+    fn print(&self) {
         for y in 0..9 {
             let row: Vec<String>= self.cells[(y*9)..((y+1)*9)]
                 .iter()
@@ -161,22 +150,10 @@ impl CellContainer {
     }
 }
 
-impl fmt::Debug for CellContainer {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        self.cells[..].fmt(formatter)
-    }
-}
-
 #[derive(Clone)]
 pub struct Board {
-    pub cells: CellContainer,
+    cells: CellContainer,
     groups: Vec<Group>
-}
-
-impl fmt::Debug for Board {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        self.cells.fmt(formatter)
-    }
 }
 
 impl Board {
@@ -368,6 +345,10 @@ impl Board {
             },
             None => None
         }
+    }
+
+    pub fn print(&self) {
+        self.cells.print();
     }
 }
 

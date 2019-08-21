@@ -2,10 +2,12 @@ use sudoku::Board;
 use std::fs;
 
 fn main() {
-    let board = Board::from_string(&fs::read_to_string("puzzle.txt").expect("Could not read puzzle.txt"));
+    let puzzle = fs::read_to_string("puzzle.txt")
+        .expect("Could not read puzzle.txt");
+    let board = Board::from_string(&puzzle);
 
     println!("Puzzle to solve:");
-    board.cells.print();
+    board.print();
 
     let solutions = board.solve();
 
@@ -14,7 +16,7 @@ fn main() {
 
     println!("Solution:");
     for s in solutions {
-        s.cells.print();
+        s.print();
     }
 }
 

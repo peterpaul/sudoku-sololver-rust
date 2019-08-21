@@ -354,9 +354,7 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use super::Cell;
-    use super::Board;
-    use super::Coord;
+    use super::*;
 
     #[test]
     fn strike_through_forward_works() {

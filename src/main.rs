@@ -7,7 +7,7 @@ fn main() {
     let board = Board::from_string(&puzzle);
 
     println!("Puzzle to solve:");
-    board.print();
+    board.pretty_print();
 
     let solutions = board.solve();
 
@@ -16,7 +16,7 @@ fn main() {
 
     println!("Solution:");
     for s in solutions {
-        s.print();
+        s.pretty_print();
     }
 }
 

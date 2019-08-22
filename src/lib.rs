@@ -148,6 +148,54 @@ impl CellContainer {
         self.block_width * self.block_height
     }
 
+    fn pretty_print(&self) -> String {
+        let group_size = self.group_size();
+        let mut result = String::new();
+        for yy in 0..(group_size/self.block_height) {
+            for _xx in 0..(group_size/self.block_width) {
+                for x in 0..self.block_width {
+                    if x == 0 {
+                        result.push_str("+-");
+                    } else {
+                        result.push_str("--");
+                    }
+                }
+            }
+            result.push_str("+\n");
+            for y in 0..self.block_height {
+                for xx in 0..(group_size/self.block_width) {
+                    for x in 0..self.block_width {
+                        let coord = Coord::new(
+                            xx * self.block_width + x,
+                            yy * self.block_height + y,
+                        );
+                        let v = match self.get_cell(&coord).get_value() {
+                            Some(v) => format!("{}", v + 1),
+                            None => String::from(" "),
+                        };
+                        if x == 0 {
+                            result.push_str(&format!("|{}", v));
+                        } else {
+                            result.push_str(&format!(" {}", v));
+                        }
+                    }
+                }
+                result.push_str("|\n");
+            }
+        }
+        for _xx in 0..(group_size/self.block_width) {
+            for x in 0..self.block_width {
+                if x == 0 {
+                    result.push_str("+-");
+                } else {
+                    result.push_str("--");
+                }
+            }
+        }
+        result.push_str("+\n");
+        result
+    }
+
     fn print(&self) {
         let group_size = self.group_size();
         for y in 0..group_size {
@@ -281,6 +329,10 @@ impl Board {
 
     pub fn print(&self) {
         self.cells.print();
+    }
+
+    pub fn pretty_print(&self) {
+        println!("{}", self.cells.pretty_print());
     }
 
     fn set_value(&mut self, coord: &Coord, value: usize) {

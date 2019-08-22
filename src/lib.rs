@@ -126,27 +126,32 @@ impl Group {
 
 #[derive(Clone)]
 struct CellContainer {
-    width: usize,
-    height: usize,
+    block_width: usize,
+    block_height: usize,
     cells: Box<[Cell]>,
 }
 
 impl CellContainer {
-    fn new(width: usize, height: usize) -> Self {
-        assert!(width == height);
-        let cells: Vec<Cell> = Repeater::new(Box::new(move || { Cell::new(width) }))
-            .take(width * height)
+    fn new(block_width: usize, block_height: usize) -> Self {
+        let group_size = block_width * block_height;
+        let cells: Vec<Cell> = Repeater::new(Box::new(move || { Cell::new(group_size) }))
+            .take(group_size * group_size)
             .collect();
         CellContainer {
-            width,
-            height,
+            block_width,
+            block_height,
             cells: cells.into_boxed_slice(),
         }
     }
 
+    fn group_size(&self) -> usize {
+        self.block_width * self.block_height
+    }
+
     fn print(&self) {
-        for y in 0..self.height {
-            let row: Vec<String>= self.cells[(y * self.width)..((y+1) * self.width)]
+        let group_size = self.group_size();
+        for y in 0..group_size {
+            let row: Vec<String>= self.cells[(y * group_size)..((y+1) * group_size)]
                 .iter()
                 .map(|c| {
                     match c.get_value() {
@@ -159,18 +164,23 @@ impl CellContainer {
         }
     }
 
+    fn index_of(&self, coord: &Coord) -> usize {
+        coord.y * self.group_size() + coord.x
+    }
+
     fn get_cell(&self, coord: &Coord) -> &Cell {
-        &self.cells[coord.y * self.width + coord.x]
+        &self.cells[self.index_of(coord)]
     }
 
     fn get_mut_cell(&mut self, coord: &Coord) -> &mut Cell {
-        &mut self.cells[coord.y * self.width + coord.x]
+        &mut self.cells[self.index_of(coord)]
     }
 
     fn get_cell_coords_to_update(&self) -> Vec<Coord> {
         let mut cell_coords_to_update = Vec::new();
-        for y in 0..self.height {
-            for x in 0..self.width {
+        let group_size = self.group_size();
+        for y in 0..group_size {
+            for x in 0..group_size {
                 let coord = Coord::new(x, y);
                 let cell = self.get_cell(&coord);
                 if !cell.is_set && cell.get_value().is_some() {
@@ -193,43 +203,45 @@ impl Board {
     ///
     /// `base` is the square root of the width/height of the puzzle.
     /// So for a regular 9x9 puzzle, use 3.
-    fn new(base: usize) -> Self {
-        let width = base * base;
-        let height = width;
+    ///
+    /// All rows and columns of the sudoku board are added as group.
+    /// And smaller blocks of `block_width` * `block_height`.
+    fn new(block_width: usize, block_height: usize) -> Self {
+        let group_size = block_width * block_height;
         let mut groups = Vec::new();
-        for x in 0..width {
+        for x in 0..group_size {
             let mut coords = Vec::new();
-            for y in 0..height {
+            for y in 0..group_size {
                 coords.push(Coord::new(x, y));
             }
             groups.push(Group::new(coords));
         }
-        for y in 0..height {
+        for y in 0..group_size {
             let mut coords = Vec::new();
-            for x in 0..width {
+            for x in 0..group_size {
                 coords.push(Coord::new(x, y));
             }
             groups.push(Group::new(coords));
         }
-        for xx in 0..base {
-            for yy in 0..base {
+        for xx in 0..(group_size/block_width) {
+            for yy in 0..(group_size/block_height) {
                 let mut coords = Vec::new();
-                for x in 0..base {
-                    for y in 0..base {
-                        coords.push(Coord::new(xx * base + x, yy * base + y));
+                for x in 0..block_width {
+                    for y in 0..block_height {
+                        coords.push(Coord::new(xx * block_width + x, yy * block_height + y));
                     }
                 }
                 groups.push(Group::new(coords));
             }
         }
         Board {
-            cells: CellContainer::new(width, height),
+            cells: CellContainer::new(block_width, block_height),
             groups: groups
         }
     }
 
     fn new_nrc() -> Self {
-        let board = Board::new(3);
+        let board = Board::new(3, 3);
         let mut groups = board.groups;
         for xx in 0..2 {
             for yy in 0..2 {
@@ -249,7 +261,7 @@ impl Board {
     }
 
     pub fn from_string(s: &str) -> Self {
-        let mut board = Board::new(3);
+        let mut board = Board::new(3, 3);
         for l in s.lines() {
             let numbers: Vec<_> = l.split(' ').map(|x| x.parse::<usize>().unwrap()).collect();
             assert!(numbers.len() == 3);
@@ -263,12 +275,8 @@ impl Board {
         self.cells.get_cell(coord)
     }
 
-    fn width(&self) -> usize {
-        self.cells.width
-    }
-
-    fn height(&self) -> usize {
-        self.cells.height
+    fn group_size(&self) -> usize {
+        self.cells.group_size()
     }
 
     pub fn print(&self) {
@@ -324,8 +332,8 @@ impl Board {
 
     pub fn is_solved(&self) -> bool {
         let mut is_solved = true;
-        for y in 0..self.height() {
-            for x in 0..self.width() {
+        for y in 0..self.group_size() {
+            for x in 0..self.group_size() {
                 is_solved &= self.get_cell(&Coord::new(x, y)).is_set
             }
         }
@@ -343,7 +351,7 @@ impl Board {
         } else {
             if let Some(p) = pivot {
                 let pivot_cell = puzzle.get_cell(&p);
-                (0..self.width()).into_iter().flat_map(|i| {
+                (0..self.group_size()).into_iter().flat_map(|i| {
                     let i = i as usize;
                     if pivot_cell.possible_values[i] {
                         let mut subpuzzle = puzzle.clone();
@@ -363,8 +371,8 @@ impl Board {
 
     fn find_pivot_coord(&self) -> Option<Coord> {
         let mut open_cells: Vec<(Coord, usize)> = Vec::new();
-        for y in 0..self.height() {
-            for x in 0..self.width() {
+        for y in 0..self.group_size() {
+            for x in 0..self.group_size() {
                 let coord = Coord::new(x, y);
                 let cell = self.get_cell(&coord);
                 if !cell.is_set {
@@ -437,7 +445,7 @@ mod tests {
 
     #[test]
     fn test_board() {
-        let mut board = Board::new(3);
+        let mut board = Board::new(3, 3);
         board.set_value(&Coord::new(3, 3), 3);
         assert_eq!(board.get_cell(&Coord::new(3, 3)).get_value(), Some(3));
     }
@@ -478,7 +486,7 @@ mod tests {
 
     #[test]
     fn solve_puzzle() {
-        let mut board = Board::new(3);
+        let mut board = Board::new(3, 3);
         board.prefill_value(&Coord::new(0, 0), 4);
         board.prefill_value(&Coord::new(1, 0), 7);
         board.prefill_value(&Coord::new(2, 0), 3);
@@ -520,6 +528,60 @@ mod tests {
         board.prefill_value(&Coord::new(5, 8), 1);
         board.prefill_value(&Coord::new(7, 8), 8);
         board.prefill_value(&Coord::new(8, 8), 6);
+
+        assert_eq!(board.is_solved(), false);
+
+        let solutions = board.solve();
+
+        assert_eq!(board.is_solved(), false);
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions.get(0).map(|it| it.is_solved()), Some(true));
+    }
+
+    #[test]
+    fn solve_2_by_3_puzzle() {
+        let mut board = Board::new(2, 3);
+        board.prefill_value(&Coord::new(0, 0), 0);
+        board.prefill_value(&Coord::new(1, 0), 1);
+        board.prefill_value(&Coord::new(2, 0), 2);
+        board.prefill_value(&Coord::new(3, 0), 3);
+        board.prefill_value(&Coord::new(4, 0), 4);
+        board.prefill_value(&Coord::new(5, 0), 5);
+        board.prefill_value(&Coord::new(0, 1), 2);
+        board.prefill_value(&Coord::new(1, 1), 3);
+        board.prefill_value(&Coord::new(2, 1), 4);
+        board.prefill_value(&Coord::new(3, 1), 5);
+        board.prefill_value(&Coord::new(4, 1), 0);
+        board.prefill_value(&Coord::new(5, 1), 1);
+        board.prefill_value(&Coord::new(0, 2), 4);
+        board.prefill_value(&Coord::new(1, 2), 5);
+        board.prefill_value(&Coord::new(2, 2), 0);
+        board.prefill_value(&Coord::new(3, 2), 1);
+        board.prefill_value(&Coord::new(4, 2), 2);
+        board.prefill_value(&Coord::new(5, 2), 3);
+        board.prefill_value(&Coord::new(0, 3), 1);
+        board.prefill_value(&Coord::new(1, 3), 0);
+        board.prefill_value(&Coord::new(2, 3), 3);
+        board.prefill_value(&Coord::new(3, 3), 2);
+        board.prefill_value(&Coord::new(4, 3), 5);
+        board.prefill_value(&Coord::new(5, 3), 4);
+        board.prefill_value(&Coord::new(0, 4), 3);
+        board.prefill_value(&Coord::new(1, 4), 2);
+        board.prefill_value(&Coord::new(0, 5), 5);
+
+        assert_eq!(board.is_solved(), false);
+
+        let solutions = board.solve();
+
+        assert_eq!(board.is_solved(), false);
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions.get(0).map(|it| it.is_solved()), Some(true));
+    }
+
+    #[test]
+    fn solve_2_by_1_puzzle() {
+        let mut board = Board::new(2, 1);
+        board.prefill_value(&Coord::new(0, 0), 0);
 
         assert_eq!(board.is_solved(), false);
 

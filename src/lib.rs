@@ -148,21 +148,44 @@ impl CellContainer {
         self.block_width * self.block_height
     }
 
+    fn pretty_print_separator_row(&self, result: &mut String) {
+        let group_size = self.group_size();
+        for _xx in 0..(group_size/self.block_width) {
+            for x in 0..self.block_width {
+                if x == 0 {
+                    result.push_str("+---");
+                } else {
+                    result.push_str("----");
+                }
+            }
+        }
+        result.push_str("+\n");
+    }
+
+    fn pretty_print_empty_row(&self, result: &mut String) {
+        let group_size = self.group_size();
+        for _xx in 0..(group_size/self.block_width) {
+            for x in 0..self.block_width {
+                if x == 0 {
+                    result.push_str("|   ");
+                } else {
+                    result.push_str("    ");
+                }
+            }
+        }
+        result.push_str("|\n");
+    }
+
     fn pretty_print(&self) -> String {
         let group_size = self.group_size();
         let mut result = String::new();
         for yy in 0..(group_size/self.block_height) {
-            for _xx in 0..(group_size/self.block_width) {
-                for x in 0..self.block_width {
-                    if x == 0 {
-                        result.push_str("+-");
-                    } else {
-                        result.push_str("--");
-                    }
-                }
-            }
-            result.push_str("+\n");
             for y in 0..self.block_height {
+                if y == 0 {
+                    self.pretty_print_separator_row(&mut result);
+                } else {
+                    self.pretty_print_empty_row(&mut result);
+                }
                 for xx in 0..(group_size/self.block_width) {
                     for x in 0..self.block_width {
                         let coord = Coord::new(
@@ -174,25 +197,16 @@ impl CellContainer {
                             None => String::from(" "),
                         };
                         if x == 0 {
-                            result.push_str(&format!("|{}", v));
+                            result.push_str(&format!("| {} ", v));
                         } else {
-                            result.push_str(&format!(" {}", v));
+                            result.push_str(&format!("  {} ", v));
                         }
                     }
                 }
                 result.push_str("|\n");
             }
         }
-        for _xx in 0..(group_size/self.block_width) {
-            for x in 0..self.block_width {
-                if x == 0 {
-                    result.push_str("+-");
-                } else {
-                    result.push_str("--");
-                }
-            }
-        }
-        result.push_str("+\n");
+        self.pretty_print_separator_row(&mut result);
         result
     }
 

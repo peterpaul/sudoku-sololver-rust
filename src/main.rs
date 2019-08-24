@@ -1,10 +1,10 @@
-use sudoku::Board;
+use sudoku::RectangularBoard;
 use std::fs;
 
 fn main() {
     let puzzle = fs::read_to_string("puzzle.txt")
         .expect("Could not read puzzle.txt");
-    let board = Board::from_string(&puzzle);
+    let board = RectangularBoard::from_string(&puzzle);
 
     println!("Puzzle to solve:");
     board.pretty_print();

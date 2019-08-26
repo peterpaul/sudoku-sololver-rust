@@ -293,7 +293,7 @@ impl Board {
                         let i = i as usize;
                         if pivot_cell.possible_values[i] {
                             let mut subpuzzle = puzzle.clone();
-                            subpuzzle.cells.get_mut_cell(&p).set_value(i);
+                            subpuzzle.set_value(&p, i);
                             subpuzzle.solve()
                         } else {
                             Vec::new()

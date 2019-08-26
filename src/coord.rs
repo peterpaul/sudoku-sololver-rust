@@ -7,8 +7,8 @@ pub struct Coord {
 impl Coord {
     pub fn new(x: usize, y: usize) -> Self {
         Coord {
-            x: x,
-            y: y,
+            x,
+            y,
         }
     }
 }

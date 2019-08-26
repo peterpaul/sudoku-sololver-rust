@@ -280,28 +280,31 @@ impl Board {
     pub fn solve(&self) -> Vec<Self> {
         let mut puzzle = self.clone();
         puzzle.discover_new_values();
-        let pivot = puzzle.find_pivot_coord();
         if puzzle.is_solved() {
             let mut result = Vec::new();
             result.push(puzzle);
             result
         } else {
-            if let Some(p) = pivot {
-                let pivot_cell = puzzle.get_cell(&p);
-                (0..self.group_size()).into_iter().flat_map(|i| {
-                    let i = i as usize;
-                    if pivot_cell.possible_values[i] {
-                        let mut subpuzzle = puzzle.clone();
-                        subpuzzle.cells.get_mut_cell(&p).set_value(i);
-                        subpuzzle.solve()
-                    } else {
-                        Vec::new()
-                    }
-                })
-                    .take(1000)
-                    .collect()
-            } else {
-                Vec::new()
+            let pivot = puzzle.find_pivot_coord();
+            match pivot {
+                Some(p) => {
+                    let pivot_cell = puzzle.get_cell(&p);
+                    (0..self.group_size()).flat_map(|i| {
+                        let i = i as usize;
+                        if pivot_cell.possible_values[i] {
+                            let mut subpuzzle = puzzle.clone();
+                            subpuzzle.cells.get_mut_cell(&p).set_value(i);
+                            subpuzzle.solve()
+                        } else {
+                            Vec::new()
+                        }
+                    })
+                        .take(1000)
+                        .collect()
+                },
+                None => {
+                    Vec::new()
+                }
             }
         }
     }

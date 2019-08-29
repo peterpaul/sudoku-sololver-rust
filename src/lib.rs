@@ -221,14 +221,24 @@ impl Board {
     }
 
     fn set_value(&mut self, coord: &Coord, value: usize) {
-        self.set_value_by(coord, value, |cell, value| { cell.set_value(value) })
+        self.set_value_by(coord, value, |cell, value, set_value| {
+            if set_value {
+                cell.set_value(value);
+            } else {
+                cell.strike_through(value);
+            }
+        });
     }
 
     fn prefill_value(&mut self, coord: &Coord, value: usize) {
-        self.set_value_by(coord, value, |cell, value| { cell.prefill_value(value) })
+        self.set_value_by(coord, value, |cell, value, set_value| {
+            if set_value {
+                cell.prefill_value(value);
+            }
+        });
     }
 
-    fn set_value_by(&mut self, coord: &Coord, value: usize, setter: fn(&mut Cell, usize)) {
+    fn set_value_by(&mut self, coord: &Coord, value: usize, setter: fn(&mut Cell, usize, bool)) {
         let cells = &mut self.cells;
         let groups: Vec<&Group> = self.groups
             .iter()
@@ -237,11 +247,7 @@ impl Board {
         for g in groups {
             for cur in &g.coordinates {
                 let cell = cells.get_mut_cell(&cur);
-                if cur == coord {
-                    setter(cell, value);
-                } else {
-                    cell.strike_through(value);
-                }
+                setter(cell, value, cur == coord);
             }
         }
     }

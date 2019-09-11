@@ -275,7 +275,7 @@ impl Board {
                 None => return Err(String::from("Value conflict detected, no solution for this puzzle")),
             };
         }
-        return if discovered_new_values {
+        if discovered_new_values {
             self.discover_new_values()
         } else {
             Ok(())
@@ -294,12 +294,10 @@ impl Board {
 
     pub fn solve(&self) -> Vec<Self> {
         let mut puzzle = self.clone();
-        return match puzzle.discover_new_values() {
+        match puzzle.discover_new_values() {
             Ok(()) => {
                 if puzzle.is_solved() {
-                    let mut result = Vec::new();
-                    result.push(puzzle);
-                    result
+                    vec![puzzle]
                 } else {
                     let pivot = puzzle.find_pivot_coord();
                     match pivot {
@@ -323,7 +321,7 @@ impl Board {
                     }
                 }
             },
-            Err(msg) => {
+            Err(_msg) => {
                 // println!("{}", msg);
                 Vec::new()
             }
@@ -332,7 +330,7 @@ impl Board {
 
     pub fn count_solutions(self) -> usize {
         let mut puzzle = self;
-        return match puzzle.discover_new_values() {
+        match puzzle.discover_new_values() {
             Ok(()) => {
                 if puzzle.is_solved() {
                     1
@@ -359,7 +357,7 @@ impl Board {
                     }
                 }
             },
-            Err(msg) => {
+            Err(_msg) => {
                 // println!("{}", msg);
                 0
             }

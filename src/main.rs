@@ -18,5 +18,16 @@ fn main() {
     for s in solutions {
         s.pretty_print();
     }
+
+    for x in 1..6 {
+        for y in x..6 {
+            if x * y < 6 {
+                let board = RectangularBoard::new(x, y);
+                board.pretty_print();
+                let solutions = board.solve();
+                println!("-> has {} solutions", solutions.len());
+            }
+        }
+    }
 }
 

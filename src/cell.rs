@@ -1,7 +1,7 @@
 use super::repeater::Repeater;
 
 /// Captures the possible values of a single Cell.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Cell {
     pub possible_values: Box<[bool]>,
     pub is_set: bool,

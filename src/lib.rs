@@ -1,6 +1,7 @@
 //! # Sudoku
 //!
 //! A sudoku solver in Rust.
+use rayon::prelude::*;
 
 mod repeater;
 mod cell;
@@ -42,6 +43,8 @@ impl RectangularBoard {
     /// All rows and columns of the sudoku board are added as group.
     /// And smaller blocks of `block_width` * `block_height`.
     pub fn new(block_width: usize, block_height: usize) -> RectangularBoard {
+        assert!(block_width > 0);
+        assert!(block_height > 0);
         let group_size = block_width * block_height;
         let mut groups = Vec::new();
         for x in 0..group_size {
@@ -148,6 +151,10 @@ impl RectangularBoard {
         result.push_str("|\n");
     }
 
+    pub fn count_solutions(self) -> usize {
+        self.board.count_solutions()
+    }
+
     pub fn solve(&self) -> Vec<Self> {
         self.board.solve()
             .into_iter()
@@ -252,7 +259,7 @@ impl Board {
         }
     }
 
-    fn discover_new_values(&mut self) {
+    fn discover_new_values(&mut self) -> Result<(), String> {
         let coords_to_update: Vec<Coord>;
         {
             coords_to_update = self.cells.get_cell_coords_to_update();
@@ -265,11 +272,13 @@ impl Board {
             }
             match cell.get_value() {
                 Some(v) => self.set_value(&coord, v),
-                None => panic!("I expect some value here, because of cells.get_cell_coords_to_update()"),
+                None => return Err(String::from("Value conflict detected, no solution for this puzzle")),
             };
         }
-        if discovered_new_values {
-            self.discover_new_values();
+        return if discovered_new_values {
+            self.discover_new_values()
+        } else {
+            Ok(())
         }
     }
 
@@ -285,32 +294,74 @@ impl Board {
 
     pub fn solve(&self) -> Vec<Self> {
         let mut puzzle = self.clone();
-        puzzle.discover_new_values();
-        if puzzle.is_solved() {
-            let mut result = Vec::new();
-            result.push(puzzle);
-            result
-        } else {
-            let pivot = puzzle.find_pivot_coord();
-            match pivot {
-                Some(p) => {
-                    let pivot_cell = puzzle.get_cell(&p);
-                    (0..self.group_size()).flat_map(|i| {
-                        let i = i as usize;
-                        if pivot_cell.possible_values[i] {
-                            let mut subpuzzle = puzzle.clone();
-                            subpuzzle.set_value(&p, i);
-                            subpuzzle.solve()
-                        } else {
+        return match puzzle.discover_new_values() {
+            Ok(()) => {
+                if puzzle.is_solved() {
+                    let mut result = Vec::new();
+                    result.push(puzzle);
+                    result
+                } else {
+                    let pivot = puzzle.find_pivot_coord();
+                    match pivot {
+                        Some(p) => {
+                            let pivot_cell = puzzle.get_cell(&p);
+                            (0..self.group_size()).into_par_iter().flat_map(|i| {
+                                let i = i as usize;
+                                if pivot_cell.possible_values[i] {
+                                    let mut subpuzzle = puzzle.clone();
+                                    subpuzzle.set_value(&p, i);
+                                    subpuzzle.solve()
+                                } else {
+                                    Vec::new()
+                                }
+                            })
+                                .collect()
+                        },
+                        None => {
                             Vec::new()
                         }
-                    })
-                        .take(1000)
-                        .collect()
-                },
-                None => {
-                    Vec::new()
+                    }
                 }
+            },
+            Err(msg) => {
+                // println!("{}", msg);
+                Vec::new()
+            }
+        }
+    }
+
+    pub fn count_solutions(self) -> usize {
+        let mut puzzle = self;
+        return match puzzle.discover_new_values() {
+            Ok(()) => {
+                if puzzle.is_solved() {
+                    1
+                } else {
+                    let pivot = puzzle.find_pivot_coord();
+                    match pivot {
+                        Some(p) => {
+                            let pivot_cell = puzzle.get_cell(&p);
+                            (0..puzzle.group_size()).into_par_iter().map(|i| {
+                                let i = i as usize;
+                                if pivot_cell.possible_values[i] {
+                                    let mut subpuzzle = puzzle.clone();
+                                    subpuzzle.set_value(&p, i);
+                                    subpuzzle.count_solutions()
+                                } else {
+                                    0
+                                }
+                            })
+                                .sum()
+                        },
+                        None => {
+                            0
+                        }
+                    }
+                }
+            },
+            Err(msg) => {
+                // println!("{}", msg);
+                0
             }
         }
     }

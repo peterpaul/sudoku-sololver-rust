@@ -304,8 +304,7 @@ impl Board {
 
     pub fn is_valid_solution(&self) -> bool {
         self.groups.iter()
-            .map(|group| { self.is_valid_group(group) })
-            .all(|is_valid| is_valid)
+            .all(|group| self.is_valid_group(group))
     }
 
     pub fn solve(&self) -> Vec<Self> {

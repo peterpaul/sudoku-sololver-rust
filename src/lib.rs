@@ -61,15 +61,17 @@ impl RectangularBoard {
             }
             groups.push(Group::new(coords));
         }
-        for xx in 0..(group_size/block_width) {
-            for yy in 0..(group_size/block_height) {
-                let mut coords = Vec::new();
-                for x in 0..block_width {
-                    for y in 0..block_height {
-                        coords.push(Coord::new(xx * block_width + x, yy * block_height + y));
+        if block_width != 1 && block_height != 1 {
+            for xx in 0..(group_size/block_width) {
+                for yy in 0..(group_size/block_height) {
+                    let mut coords = Vec::new();
+                    for x in 0..block_width {
+                        for y in 0..block_height {
+                            coords.push(Coord::new(xx * block_width + x, yy * block_height + y));
+                        }
                     }
+                    groups.push(Group::new(coords));
                 }
-                groups.push(Group::new(coords));
             }
         }
         let board = Board::new(

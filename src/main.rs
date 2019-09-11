@@ -26,6 +26,10 @@ fn main() {
                 board.pretty_print();
                 let solutions = board.solve();
                 println!("-> has {} solutions", solutions.len());
+                let valid_solutions: Vec<&RectangularBoard> = solutions.iter()
+                    .filter(|s| { s.is_valid_solution() })
+                    .collect();
+                println!("   and {} valid solutions", valid_solutions.len());
             }
         }
     }

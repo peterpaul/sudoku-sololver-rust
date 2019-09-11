@@ -292,6 +292,22 @@ impl Board {
         is_solved
     }
 
+    fn is_valid_group(&self, group: &Group) -> bool {
+        let mut validation_cell = Cell::new(self.group_size());
+        for coord in &group.coordinates {
+            if let Some(value) = self.get_cell(&coord).get_value() {
+                validation_cell.strike_through(value);
+            }
+        }
+        validation_cell.possibilities() == 0
+    }
+
+    pub fn is_valid_solution(&self) -> bool {
+        self.groups.iter()
+            .map(|group| { self.is_valid_group(group) })
+            .all(|is_valid| is_valid)
+    }
+
     pub fn solve(&self) -> Vec<Self> {
         let mut puzzle = self.clone();
         match puzzle.discover_new_values() {

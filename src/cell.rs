@@ -1,5 +1,3 @@
-use super::repeater::Repeater;
-
 /// Captures the possible values of a single Cell.
 #[derive(Clone, Debug)]
 pub struct Cell {
@@ -9,11 +7,8 @@ pub struct Cell {
 
 impl Cell {
     pub fn new(size: usize) -> Self {
-        let possible_values: Vec<bool> = Repeater::new(Box::new(|| true))
-            .take(size)
-            .collect();
         Cell {
-            possible_values: possible_values.into_boxed_slice(),
+            possible_values: vec![true; size].into_boxed_slice(),
             is_set: false,
         }
     }
@@ -30,16 +25,15 @@ impl Cell {
     }
 
     pub fn get_value(&self) -> Option<usize> {
-        let mut values = 0;
-        let mut last_value = 0;
-        for i in 0..self.len() {
-            if self.possible_values[i] {
-                values += 1;
-                last_value = i;
-            }
-        }
-        if values == 1 {
-            Some(last_value)
+        let possible_values: Vec<usize> = self.possible_values.iter().enumerate()
+            .filter_map(|(index, is_possible)| if *is_possible {
+                Some(index)
+            } else {
+                None
+            })
+            .collect();
+        if possible_values.len() == 1 {
+            Some(possible_values[0])
         } else {
             None
         }
@@ -60,12 +54,8 @@ impl Cell {
     }
 
     pub fn possibilities(&self) -> usize {
-        let mut p = 0;
-        for i in 0..self.len() {
-            if self.possible_values[i] {
-                p += 1;
-            }
-        }
-        p
+        self.possible_values.iter()
+            .filter(|is_possible| **is_possible)
+            .count()
     }
 }

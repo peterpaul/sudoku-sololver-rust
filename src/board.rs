@@ -47,16 +47,12 @@ impl Board {
 
     fn set_value_by(&mut self, coord: &Coord, value: usize, setter: fn(&mut Cell, usize, bool)) {
         let cells = &mut self.cells;
-        let groups: Vec<&Group> = self.groups
-            .iter()
+        for cur in self.groups.iter()
             .filter(|g| { g.contains_coord(coord) })
-            .collect();
-        for g in groups {
-            for cur in &g.coordinates {
+            .flat_map(|g| &g.coordinates) {
                 let cell = cells.get_mut_cell(&cur);
                 setter(cell, value, cur == coord);
             }
-        }
     }
 
     fn discover_new_values(&mut self) -> Result<(), String> {
